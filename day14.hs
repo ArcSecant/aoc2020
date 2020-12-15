@@ -4,6 +4,7 @@ import Data.Char
 import Data.List
 import Data.List.Split
 import qualified Data.IntMap.Strict as IntMap
+import qualified Data.Map.Strict as Map
 
 toBin :: Int -> [Int]
 toBin 0 = [0]
@@ -28,7 +29,7 @@ maskInt mask num = let zipped = zip mask $ padZeroes $ toBin num in
 
 solutionHelper :: [String] -> String -> IntMap.IntMap Int -> IntMap.IntMap Int
 solutionHelper [] _ curMap = curMap
-solutionHelper line curMask curMap = case getNums l of
+solutionHelper line curMask curMap = case getNums l  of
     n:[] -> solutionHelper ls n curMap
     n:ns -> solutionHelper ls curMask $ IntMap.insert (read n) (maskInt curMask $ read $ head ns) curMap
     _ -> curMap
@@ -38,31 +39,37 @@ solution :: [String] -> Int
 solution ls = IntMap.foldr (+) 0 $ solutionHelper ls "" IntMap.empty
 
 -- Part 2
+type Key = String
+
 interleave :: [a] -> [a] -> [a]
 interleave xs ys = concat (transpose [xs, ys])
 
-maskInt2 :: [Char] -> Int -> [Int]
-maskInt2 mask num = map (toDec . (map digitToInt) . reverse . concat . interleave (splitOn "X" masked)) $ map (tail . splitOn "") bits
+maskInt2 :: [Char] -> Int -> [Key]
+maskInt2 mask num = map (concat . interleave (splitOn "X" masked)) bits
     where
-        masked = map f $ zip mask $ padZeroes $ toBin num
-        bits = sequence $ take (length $ filter (== 'X') masked) $ repeat "01"
-        f (a, b) = case a of
-            '0' -> intToDigit b
-            '1' -> '1'
-            c -> c
+        (masked, count) = f $ zip mask $ padZeroes $ toBin num
+        bits = sequence $ take (length $ filter (== 'X') masked) $ repeat ["0", "1"]
 
-solutionHelper2 :: [String] -> String -> IntMap.IntMap Int -> IntMap.IntMap Int
+f :: [(Char, Int)] -> Int -> 
+f [] _ = ([], 0)
+f (x:xs) cnt = let (a, b) = x in
+    case a of
+        '0' -> (:) (intToDigit b, cnt) (f xs cnt)
+        '1' -> (:) ('1', cnt) (f xs cnt)
+        c -> c
+
+solutionHelper2 :: [String] -> String -> Map.Map Key Int -> Map.Map Key Int
 solutionHelper2 [] _ curMap = curMap
 solutionHelper2 line curMask curMap = let (l:ls) = line in case getNums l of
     n:[] -> solutionHelper2 ls n curMap
     n:ns -> solutionHelper2 ls curMask $ insertAll curMap (read $ head ns) $ maskInt2 curMask $ read n
     _ -> curMap
-    where insertAll cur val xs = foldr (\x m -> IntMap.insert x val m) cur xs
+    where insertAll cur val xs = foldr (\x m -> Map.insert x val m) cur xs
 
 solution2 :: [String] -> Int
-solution2 ls = IntMap.foldr (+) 0 $ solutionHelper2 ls "" IntMap.empty
+solution2 ls = Map.foldr (+) 0 $ solutionHelper2 ls "" Map.empty
 
 main :: IO Int
 main = do
     input <- fmap lines $ readFile "inputday14"
-    return (solution input)
+    return (solution2 input)
