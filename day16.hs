@@ -25,7 +25,7 @@ parseInput inp =
     in (constraints, yourTicket, nearbyTickets)
     where
         cons = head inp
-        yours = inp !! 2
+        yours = inp !! 1
         nearby = last inp
 
 -- Part 1
