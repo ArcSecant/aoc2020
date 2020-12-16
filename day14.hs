@@ -47,16 +47,12 @@ interleave xs ys = concat (transpose [xs, ys])
 maskInt2 :: [Char] -> Int -> [Key]
 maskInt2 mask num = map (concat . interleave (splitOn "X" masked)) bits
     where
-        (masked, count) = f $ zip mask $ padZeroes $ toBin num
+        masked = zipWith f mask $ padZeroes $ toBin num
         bits = sequence $ take (length $ filter (== 'X') masked) $ repeat ["0", "1"]
-
-f :: [(Char, Int)] -> Int -> 
-f [] _ = ([], 0)
-f (x:xs) cnt = let (a, b) = x in
-    case a of
-        '0' -> (:) (intToDigit b, cnt) (f xs cnt)
-        '1' -> (:) ('1', cnt) (f xs cnt)
-        c -> c
+        f a b = case a of 
+            '0' -> intToDigit b
+            '1' -> '1'
+            c -> c
 
 solutionHelper2 :: [String] -> String -> Map.Map Key Int -> Map.Map Key Int
 solutionHelper2 [] _ curMap = curMap
