@@ -1,7 +1,5 @@
 module Main where
 
-import Debug.Trace
-import Data.List
 import Data.List.Split
 import qualified Data.Set as Set
 

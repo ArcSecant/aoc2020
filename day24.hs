@@ -2,8 +2,10 @@ module Main where
 
 import Data.List
 import qualified Data.HashMap.Strict as HashMap
+import qualified Data.Set as Set
 
 type HexPoint = (Int, Int, Int)
+type Floor = HashMap.HashMap HexPoint Int
 
 hexAdd :: HexPoint -> HexPoint -> HexPoint
 hexAdd (a, b, c) (x, y, z) = (a + x, b + y, c + z)
@@ -33,32 +35,40 @@ solution :: [String] -> Int
 solution str = HashMap.size $ HashMap.filter odd $ makeMap str HashMap.empty
 
 -- Part 2
-type Floor = HashMap.HashMap HexPoint Int
+type Tiles = Set.Set HexPoint
+type Floor2 = (Tiles, Tiles)
+data State = White | Black deriving (Eq)
 
 neighbours :: HexPoint -> [HexPoint]
 neighbours p = map (hexAdd p) [(a, b, c) | a <- [-1..1], b <- [-1..1], c <- [-1..1], a + b + c == 0, (a, b, c) /= (0, 0, 0)]
 
-nextSingleState :: Floor -> HexPoint -> Int
-nextSingleState fl p = case HashMap.lookup p fl of
-    Just v -> case odd v of
-        True -> if l == 0 || l > 2 then 1 else 0
-        _ -> if l == 2 then 1 else 0
-    Nothing -> if l == 2 then 1 else 0
+nextSingleState :: Floor2 -> HexPoint -> State
+nextSingleState (_, bt) p = case Set.member p bt of
+    True -> if l == 0 || l > 2 then White else Black
+    _ -> if l == 2 then Black else White
     where
-        l = length $ filter odd $ map f $ neighbours p
-        f x = case HashMap.lookup x fl of
-            Just v -> v
-            _ -> 0
+        l = length $ filter (\x -> Set.member x bt) $ neighbours p
 
-nextState :: Floor -> Floor
-nextState fl = HashMap.mapWithKey f fl
-    where f k v = v + nextSingleState fl k
+nextState :: Floor2 -> Floor2
+nextState fl = let
+    (wt1, wt2) = Set.partition (\x -> nextSingleState fl x == White) wt
+    (bt1, bt2) = Set.partition (\x -> nextSingleState fl x == White) bt
+    in (Set.union wt1 bt1, Set.union wt2 bt2)
+    where (wt, bt) = fl
 
-initFloor :: Floor
-initFloor = HashMap.fromList $ zip [(a, b, c) | a <- [-100..100], b <- [-100..100], c <- [-100..100], a + b + c == 0] [0,0..]
+initFloor :: Floor2
+initFloor = (Set.fromList [(a, b, c) | a <- [-75..75], b <- [-75..75], c <- [-75..75], a + b + c == 0], Set.empty)
+
+makeMap2 :: [String] -> Floor2 -> Floor2
+makeMap2 [] m = m
+makeMap2 (x:xs) (wt, bt) = makeMap2 xs $ g (getPoint x)
+    where
+        g p = case Set.member p wt of
+            True -> (Set.delete p wt, Set.insert p bt)
+            _ -> (Set.insert p wt, Set.delete p bt)
 
 solution2 :: [String] -> Int
-solution2 str = HashMap.size $ HashMap.filter odd $ f 100 $ makeMap str initFloor
+solution2 str = Set.size $ snd $ f 100 $ makeMap2 str initFloor
     where f n m
             | n == 0 = m
             | otherwise = f (n-1) $ nextState m
